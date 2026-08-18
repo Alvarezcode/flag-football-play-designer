@@ -23,3 +23,6 @@
 - [x] Reproduce the route-drawing pointer-end sequence and confirm no duplicate-key warning is emitted.
 - [x] Add an automated assertion that repeated route finalization cannot insert a second route with the same ID.
 - [x] Document the verified duplicate-route insertion root cause in the bug checklist.
+- [x] Add route-point editing handles for selecting and fine-tuning finalized route paths.
+- [x] Add a standard offensive and defensive formation template picker.
+- [x] Validate route adjustment and template loading with deterministic tests and responsive visual review.

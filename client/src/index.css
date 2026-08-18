@@ -74,6 +74,13 @@
   .format-button { @apply flex-1 rounded-lg border border-white/[.1] bg-black/[.1] px-2 py-2 text-xs font-semibold text-[#90a59f] hover:text-white; }
   .format-button-active { @apply border-[#7cd9bf]/45 bg-[#7cd9bf]/10 text-[#a6f0dc]; }
   .icon-action { @apply size-9 border-white/[.11] bg-white/[.04] text-[#afc0bb] hover:bg-white/[.09] hover:text-white; }
+  .template-side-toggle { @apply flex rounded-lg bg-black/20 p-1; }
+  .template-side-button { @apply flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[10px] font-semibold text-[#839a93] hover:text-white; }
+  .template-side-button-active { @apply bg-white/[.09] text-[#eaf3ee]; }
+  .formation-template { @apply flex w-full items-center gap-2 rounded-xl border border-white/[.08] bg-black/[.1] p-2.5 text-left hover:border-white/[.17] hover:bg-white/[.055]; }
+  .formation-template-mark { @apply grid size-7 shrink-0 place-items-center rounded-lg; }
+  .formation-template-mark-offense { @apply bg-[#f3b348]/15 text-[#ffd17b]; }
+  .formation-template-mark-defense { @apply bg-[#86d7e8]/15 text-[#a7e8f6]; }
   .field-shell { @apply overflow-hidden rounded-[1.35rem] border border-white/[.12] bg-[#102124] shadow-[0_30px_70px_rgba(0,0,0,.25)]; }
   .field-shell-topbar, .field-shell-footer { @apply flex items-center justify-between gap-3 bg-[#0d1b1e] px-4 py-3; }
   .field-shell-topbar { @apply border-b border-white/[.08]; }
@@ -85,6 +92,9 @@
   .field-canvas-vertical .play-field-svg { @apply h-[520px] w-auto max-w-full sm:h-[590px]; }
   .play-field-token, .play-field-ball { cursor: grab; }
   .play-field-token:active, .play-field-ball:active { cursor: grabbing; }
+  .route-path-selectable { cursor: pointer; }
+  .route-point-handle { cursor: grab; }
+  .route-point-handle:active { cursor: grabbing; }
   .field-yard-line { stroke: rgba(255,255,255,.37); stroke-width: 2; }
   .field-hash { stroke: rgba(255,255,255,.53); stroke-width: 2; }
   .field-los { stroke: #f3b348; stroke-width: 5; stroke-dasharray: 15 11; filter: drop-shadow(0 1px 1px rgba(0,0,0,.28)); }

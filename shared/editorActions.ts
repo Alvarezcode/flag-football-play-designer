@@ -1,4 +1,4 @@
-import type { RoutePath } from "./playbook";
+import type { FieldPoint, RoutePath } from "./playbook";
 
 /**
  * Editor interaction contract.
@@ -35,4 +35,11 @@ export function clearPlayerRoutes(routes: RoutePath[], playerId: string): RouteP
 
 export function clearAllRoutes(): RoutePath[] {
   return [];
+}
+
+export function updateRoutePoint(routes: RoutePath[], routeId: string, pointIndex: number, point: FieldPoint): RoutePath[] {
+  return routes.map(route => route.id !== routeId ? route : {
+    ...route,
+    points: route.points.map((existing, index) => index === pointIndex ? { ...point } : existing),
+  });
 }

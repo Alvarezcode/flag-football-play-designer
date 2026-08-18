@@ -6,12 +6,14 @@ import { trpc } from "@/lib/trpc";
 import PlayField, { PlayThumbnail } from "@/components/PlayField";
 import type { FieldOrientation, FieldPoint, PlayDiagram, PlayerSide, PlayerToken, RouteKind, RoutePath, RouteStyle } from "@shared/playbook";
 import { appendRoutePoint, transformFieldPoint } from "@shared/playDesigner";
-import { ballDragState, clearAllRoutes, clearPlayerRoutes, finalizeRoute, idleDragState, playerDragState, undoLastRoute } from "@shared/editorActions";
+import { ballDragState, clearAllRoutes, clearPlayerRoutes, finalizeRoute, idleDragState, playerDragState, undoLastRoute, updateRoutePoint } from "@shared/editorActions";
+import { applyFormationTemplate, formationTemplates, type FormationSide, type FormationTemplate } from "@shared/formations";
 import { nanoid } from "nanoid";
-import { ArrowDownToLine, ChevronRight, CircleDot, Eraser, FilePlus2, Flag, LayoutGrid, Loader2, LogIn, MousePointer2, PenTool, RotateCcw, Save, Sparkles, Trash2, Undo2, UsersRound } from "lucide-react";
+import { ArrowDownToLine, ChevronRight, CircleDot, Eraser, FilePlus2, Flag, LayoutGrid, LayoutTemplate, Loader2, LogIn, MousePointer2, PenTool, RotateCcw, Save, Shield, Sparkles, Trash2, Undo2, UsersRound } from "lucide-react";
 
 type View = "design" | "playbook";
 type Tool = "select" | "route" | "ball";
+type RoutePointHandle = { routeId: string; pointIndex: number };
 
 const routePresets: { id: RouteKind; label: string; color: string; style: RouteStyle }[] = [
   { id: "go", label: "Go", color: "#42D5FF", style: "solid" },
@@ -52,6 +54,7 @@ function transformPlayers(players: PlayerToken[], direction: "horizontalToVertic
 
 function diagramToDataUri(svg: SVGSVGElement, filename: string) {
   const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.querySelector(".route-point-handles")?.remove();
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clone.setAttribute("width", "1600");
   clone.setAttribute("height", "1000");
@@ -91,7 +94,9 @@ export default function Home() {
   const [ball, setBall] = useState<FieldPoint>({ x: 46, y: 50 });
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [dragState, setDragState] = useState(idleDragState);
+  const [draggingRoutePoint, setDraggingRoutePoint] = useState<RoutePointHandle | null>(null);
   const [drawingRoute, setDrawingRoute] = useState<RoutePath | null>(null);
   const [routeKind, setRouteKind] = useState<RouteKind>("go");
   const [routeColor, setRouteColor] = useState("#42D5FF");
@@ -101,6 +106,7 @@ export default function Home() {
   const [playType, setPlayType] = useState<"run" | "pass">("pass");
   const [notes, setNotes] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [templateSide, setTemplateSide] = useState<FormationSide>("offense");
   const fieldFrameRef = useRef<HTMLDivElement>(null);
   const drawingRouteRef = useRef<RoutePath | null>(null);
 
@@ -113,6 +119,7 @@ export default function Home() {
   const diagram: PlayDiagram = useMemo(() => ({ orientation, format, players, routes, ball }), [orientation, format, players, routes, ball]);
   const isSaving = createPlay.isPending || updatePlay.isPending;
   const activePlayer = players.find(player => player.id === activePlayerId);
+  const selectedRoute = routes.find(route => route.id === selectedRouteId);
   const draggingPlayerId = dragState.playerId;
   const draggingBall = dragState.ball;
 
@@ -139,6 +146,7 @@ export default function Home() {
     setRoutes([]);
     setBall(orientation === "vertical" ? { x: 50, y: 54 } : { x: 46, y: 50 });
     setActivePlayerId(null);
+    setSelectedRouteId(null);
     toast.message("Formation reset. Routes cleared.");
   };
 
@@ -149,6 +157,7 @@ export default function Home() {
     setPlayers(orientation === "vertical" ? transformPlayers(initial, "horizontalToVertical") : initial);
     setRoutes([]);
     setActivePlayerId(null);
+    setSelectedRouteId(null);
     toast.message(`${nextFormat} formation loaded. Routes cleared.`);
   };
 
@@ -174,6 +183,7 @@ export default function Home() {
 
   const startRoute = (playerId: string, point: FieldPoint) => {
     setActivePlayerId(playerId);
+    setSelectedRouteId(null);
     const draft = { id: nanoid(), playerId, points: [point], color: routeColor, style: routeStyle, kind: routeKind };
     drawingRouteRef.current = draft;
     setDrawingRoute(draft);
@@ -190,16 +200,38 @@ export default function Home() {
 
   const endInteraction = () => {
     setDragState(idleDragState());
+    setDraggingRoutePoint(null);
     const draft = drawingRouteRef.current;
     drawingRouteRef.current = null;
     setDrawingRoute(null);
     setRoutes(routes => finalizeRoute(routes, draft));
+    if (draft && draft.points.length > 1) setSelectedRouteId(draft.id);
   };
 
-  const undoRoute = () => setRoutes(undoLastRoute);
+  const undoRoute = () => {
+    setRoutes(undoLastRoute);
+    setSelectedRouteId(null);
+  };
   const clearSelectedPlayerRoutes = () => {
     if (!activePlayerId) return toast.message("Select a player first.");
     setRoutes(current => clearPlayerRoutes(current, activePlayerId));
+    setSelectedRouteId(null);
+  };
+
+  const selectRoute = (id: string) => {
+    setSelectedRouteId(id);
+    setActiveTool("select");
+  };
+
+  const moveRoutePoint = (routeId: string, pointIndex: number, point: FieldPoint) => setRoutes(current => updateRoutePoint(current, routeId, pointIndex, point));
+
+  const applyTemplate = (template: FormationTemplate) => {
+    setPlayers(current => applyFormationTemplate(current, template));
+    setRoutes([]);
+    setActivePlayerId(null);
+    setSelectedRouteId(null);
+    setFormation(template.name);
+    toast.message(`${template.name} loaded. Routes cleared.`);
   };
 
   const newPlay = () => {
@@ -214,6 +246,7 @@ export default function Home() {
     setNotes("");
     setEditingId(null);
     setActivePlayerId(null);
+    setSelectedRouteId(null);
     setView("design");
   };
 
@@ -262,6 +295,7 @@ export default function Home() {
     setNotes(play.notes);
     setEditingId(play.id);
     setActivePlayerId(null);
+    setSelectedRouteId(null);
     setView("design");
     toast.message(`Loaded ${play.name}.`);
   };
@@ -330,7 +364,7 @@ export default function Home() {
                   <button onClick={() => setActiveTool("route")} className={`tool-button ${activeTool === "route" ? "tool-button-active" : ""}`}><PenTool className="size-4" />Route</button>
                   <button onClick={() => setActiveTool("ball")} className={`tool-button ${activeTool === "ball" ? "tool-button-active" : ""}`}><CircleDot className="size-4" />Ball</button>
                 </div>
-                <p className="mt-3 text-xs leading-5 text-[#89a19a]">{activeTool === "route" ? "Press on a player and trace their path." : activeTool === "ball" ? "Drag the football to set the snap point." : "Drag tokens anywhere on the field."}</p>
+                <p className="mt-3 text-xs leading-5 text-[#89a19a]">{selectedRoute ? "Route selected — drag the white control points to refine it." : activeTool === "route" ? "Press on a player and trace their path." : activeTool === "ball" ? "Drag the football to set the snap point." : "Drag tokens anywhere on the field."}</p>
               </section>
 
               <section className="control-card">
@@ -363,6 +397,17 @@ export default function Home() {
                 </div>
                 <p className="mt-3 text-xs leading-5 text-[#89a19a]">{labelForFormat} personnel. Reset restores the base look and clears paths.</p>
               </section>
+
+              <section className="control-card">
+                <div className="control-heading"><span>Formation library</span><LayoutTemplate className="size-4 text-[#89a19a]" /></div>
+                <div className="template-side-toggle mt-3">
+                  <button onClick={() => setTemplateSide("offense")} className={`template-side-button ${templateSide === "offense" ? "template-side-button-active" : ""}`}><Flag className="size-3.5" /> Offense</button>
+                  <button onClick={() => setTemplateSide("defense")} className={`template-side-button ${templateSide === "defense" ? "template-side-button-active" : ""}`}><Shield className="size-3.5" /> Defense</button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {formationTemplates.filter(template => template.side === templateSide).map(template => <button key={template.id} onClick={() => applyTemplate(template)} className="formation-template"><span className={`formation-template-mark ${template.side === "offense" ? "formation-template-mark-offense" : "formation-template-mark-defense"}`}>{template.side === "offense" ? <Flag className="size-3" /> : <Shield className="size-3" />}</span><span className="min-w-0 text-left"><span className="block text-xs font-semibold text-[#e7f0eb]">{template.name}</span><span className="mt-0.5 block truncate text-[10px] leading-4 text-[#839a93]">{template.description}</span></span><ChevronRight className="ml-auto size-3.5 shrink-0 text-[#718780]" /></button>)}
+                </div>
+              </section>
             </aside>
 
             <section className="order-1 min-w-0 xl:order-2">
@@ -379,20 +424,25 @@ export default function Home() {
                     ball={ball}
                     activeTool={activeTool}
                     activePlayerId={activePlayerId}
+                    selectedRouteId={selectedRouteId}
                     drawingRoute={drawingRoute}
                     draggingPlayerId={draggingPlayerId}
                     draggingBall={draggingBall}
+                    draggingRoutePoint={draggingRoutePoint}
                     onPlayerStart={id => startPlayerInteraction(id)}
                     onPlayerMove={movePlayer}
                     onBallStart={() => setDragState(ballDragState())}
                     onBallMove={moveBall}
                     onRouteStart={startRoute}
                     onRouteExtend={extendRoute}
+                    onRouteSelect={selectRoute}
+                    onRoutePointStart={(routeId, pointIndex) => setDraggingRoutePoint({ routeId, pointIndex })}
+                    onRoutePointMove={moveRoutePoint}
                     onInteractionEnd={endInteraction}
                   />
                 </div>
                 <div className="field-shell-footer">
-                  <span>{activePlayer ? <><span className="text-white">{activePlayer.label}</span> selected</> : "Select a player to edit their route"}</span>
+                  <span>{selectedRoute ? <><span className="text-white">{selectedRoute.kind}</span> route selected — drag a control point</> : activePlayer ? <><span className="text-white">{activePlayer.label}</span> selected</> : "Tap a route to reveal editing handles"}</span>
                   <div className="flex gap-2">
                     <button onClick={undoRoute} disabled={!routes.length} className="canvas-action"><Undo2 className="size-3.5" /> Undo</button>
                     <button onClick={clearSelectedPlayerRoutes} disabled={!activePlayerId} className="canvas-action"><Eraser className="size-3.5" /> Clear player</button>

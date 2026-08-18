@@ -3,6 +3,7 @@ import type { FieldOrientation, FieldPoint, PlayerToken, RoutePath } from "@shar
 import { clampFieldPoint } from "@shared/playDesigner";
 
 type ActiveTool = "select" | "route" | "ball";
+type RoutePointHandle = { routeId: string; pointIndex: number };
 
 type PlayFieldProps = {
   orientation: FieldOrientation;
@@ -11,15 +12,20 @@ type PlayFieldProps = {
   ball: FieldPoint;
   activeTool: ActiveTool;
   activePlayerId: string | null;
+  selectedRouteId: string | null;
   drawingRoute: RoutePath | null;
   draggingPlayerId: string | null;
   draggingBall: boolean;
+  draggingRoutePoint: RoutePointHandle | null;
   onPlayerStart: (id: string, point: FieldPoint) => void;
   onPlayerMove: (id: string, point: FieldPoint) => void;
   onBallStart: (point: FieldPoint) => void;
   onBallMove: (point: FieldPoint) => void;
   onRouteStart: (id: string, point: FieldPoint) => void;
   onRouteExtend: (point: FieldPoint) => void;
+  onRouteSelect: (id: string) => void;
+  onRoutePointStart: (routeId: string, pointIndex: number) => void;
+  onRoutePointMove: (routeId: string, pointIndex: number, point: FieldPoint) => void;
   onInteractionEnd: () => void;
 };
 
@@ -111,25 +117,43 @@ function FieldMarkings({ orientation }: { orientation: FieldOrientation }) {
   );
 }
 
-function RouteLine({ route, orientation, markerId, faded = false }: { route: RoutePath; orientation: FieldOrientation; markerId: string; faded?: boolean }) {
+function RouteLine({ route, orientation, markerId, faded = false, selected = false, onSelect }: { route: RoutePath; orientation: FieldOrientation; markerId: string; faded?: boolean; selected?: boolean; onSelect?: (id: string) => void }) {
   const points = route.points.map(point => {
     const coord = toSvgPoint(point, orientation);
     return `${coord.x},${coord.y}`;
   }).join(" ");
-  return (
+  return <g onPointerDown={onSelect ? event => { event.stopPropagation(); onSelect(route.id); } : undefined} className={onSelect ? "route-path-selectable" : undefined}>
+    {onSelect && <polyline points={points} fill="none" stroke="transparent" strokeWidth="34" strokeLinecap="round" strokeLinejoin="round" />}
     <polyline
       points={points}
       fill="none"
       stroke={route.color}
-      strokeWidth="8"
+      strokeWidth={selected ? "10" : "8"}
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeDasharray={dashFor(route.style)}
       markerEnd={`url(#${markerId})`}
       opacity={faded ? 0.65 : 1}
-      style={{ filter: "drop-shadow(0 2px 2px rgba(0,0,0,.28))" }}
+      style={{ filter: selected ? "drop-shadow(0 0 5px rgba(255,255,255,.85))" : "drop-shadow(0 2px 2px rgba(0,0,0,.28))" }}
     />
-  );
+  </g>;
+}
+
+function editablePointIndexes(points: FieldPoint[]) {
+  if (points.length <= 6) return points.map((_, index) => index);
+  return Array.from(new Set(Array.from({ length: 6 }, (_, index) => Math.round((points.length - 1) * index / 5))));
+}
+
+function RouteHandles({ route, orientation, onPointStart }: { route: RoutePath; orientation: FieldOrientation; onPointStart: (pointIndex: number) => void }) {
+  return <g className="route-point-handles">
+    {editablePointIndexes(route.points).map(pointIndex => {
+      const point = toSvgPoint(route.points[pointIndex], orientation);
+      return <g key={`route-handle-${route.id}-${pointIndex}`} className="route-point-handle" onPointerDown={event => { event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); onPointStart(pointIndex); }}>
+        <circle cx={point.x} cy={point.y} r="13" fill="rgba(9,20,22,.7)" stroke="white" strokeWidth="3" />
+        <circle cx={point.x} cy={point.y} r="6" fill={route.color} stroke="rgba(9,20,22,.75)" strokeWidth="2" />
+      </g>;
+    })}
+  </g>;
 }
 
 export function PlayThumbnail({ orientation, players, routes }: Pick<PlayFieldProps, "orientation" | "players" | "routes">) {
@@ -160,15 +184,20 @@ export default function PlayField({
   ball,
   activeTool,
   activePlayerId,
+  selectedRouteId,
   drawingRoute,
   draggingPlayerId,
   draggingBall,
+  draggingRoutePoint,
   onPlayerStart,
   onPlayerMove,
   onBallStart,
   onBallMove,
   onRouteStart,
   onRouteExtend,
+  onRouteSelect,
+  onRoutePointStart,
+  onRoutePointMove,
   onInteractionEnd,
 }: PlayFieldProps) {
   const { width, height } = fieldSize(orientation);
@@ -176,11 +205,12 @@ export default function PlayField({
   const radius = Math.min(width, height) * 0.043;
 
   const onSvgPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!drawingRoute && !draggingPlayerId && !draggingBall) return;
+    if (!drawingRoute && !draggingPlayerId && !draggingBall && !draggingRoutePoint) return;
     const point = getPoint(event.clientX, event.clientY, event.currentTarget, orientation);
     if (drawingRoute) onRouteExtend(point);
     if (draggingPlayerId) onPlayerMove(draggingPlayerId, point);
     if (draggingBall) onBallMove(point);
+    if (draggingRoutePoint) onRoutePointMove(draggingRoutePoint.routeId, draggingRoutePoint.pointIndex, point);
   };
 
   const onPlayerPointerDown = (event: ReactPointerEvent<SVGGElement>, player: PlayerToken) => {
@@ -222,8 +252,9 @@ export default function PlayField({
       </defs>
       <FieldMarkings orientation={orientation} />
       {[...routes, ...(drawingRoute ? [drawingRoute] : [])].map((route, index) => (
-        <RouteLine key={`field-route-${route.id}-${index}`} route={route} orientation={orientation} markerId={markerId} faded={route.id === drawingRoute?.id} />
+        <RouteLine key={`field-route-${route.id}-${index}`} route={route} orientation={orientation} markerId={markerId} faded={route.id === drawingRoute?.id} selected={route.id === selectedRouteId} onSelect={onRouteSelect} />
       ))}
+      {routes.filter(route => route.id === selectedRouteId).map(route => <RouteHandles key={`handles-${route.id}`} route={route} orientation={orientation} onPointStart={pointIndex => onRoutePointStart(route.id, pointIndex)} />)}
       <g
         onPointerDown={onBallPointerDown}
         className="play-field-ball"

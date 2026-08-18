@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ballDragState, clearAllRoutes, clearPlayerRoutes, finalizeRoute, idleDragState, playerDragState, undoLastRoute } from "./editorActions";
+import { ballDragState, clearAllRoutes, clearPlayerRoutes, finalizeRoute, idleDragState, playerDragState, undoLastRoute, updateRoutePoint } from "./editorActions";
 import type { RoutePath } from "./playbook";
 
 const qRoute: RoutePath = { id: "route-q", playerId: "q", color: "#42D5FF", style: "solid", kind: "go", points: [{ x: 30, y: 50 }, { x: 65, y: 50 }] };
@@ -24,6 +24,12 @@ describe("editor route lifecycle", () => {
   it("clears a selected player’s assignments without altering teammates", () => {
     expect(clearPlayerRoutes([qRoute, wrRoute], "q")).toEqual([wrRoute]);
     expect(clearAllRoutes()).toEqual([]);
+  });
+
+  it("moves only the selected editable point on a finalized route", () => {
+    const result = updateRoutePoint([qRoute, wrRoute], "route-q", 1, { x: 72, y: 33 });
+    expect(result[0].points).toEqual([{ x: 30, y: 50 }, { x: 72, y: 33 }]);
+    expect(result[1]).toEqual(wrRoute);
   });
 });
 
