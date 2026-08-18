@@ -20,7 +20,9 @@ export const playerDragState = (playerId: string): EditorDragState => ({ playerI
 export const ballDragState = (): EditorDragState => ({ playerId: null, ball: true });
 
 export function finalizeRoute(routes: RoutePath[], drawingRoute: RoutePath | null): RoutePath[] {
-  return drawingRoute && drawingRoute.points.length > 1 ? [...routes, drawingRoute] : routes;
+  return drawingRoute && drawingRoute.points.length > 1 && !routes.some(route => route.id === drawingRoute.id)
+    ? [...routes, drawingRoute]
+    : routes;
 }
 
 export function undoLastRoute(routes: RoutePath[]): RoutePath[] {

@@ -143,11 +143,11 @@ export function PlayThumbnail({ orientation, players, routes }: Pick<PlayFieldPr
         </marker>
       </defs>
       <FieldMarkings orientation={orientation} />
-      {routes.map(route => <RouteLine key={route.id} route={route} orientation={orientation} markerId={markerId} />)}
-      {players.map(player => {
+      {routes.map((route, index) => <RouteLine key={`thumbnail-route-${route.id}-${index}`} route={route} orientation={orientation} markerId={markerId} />)}
+      {players.map((player, index) => {
         const point = toSvgPoint(player, orientation);
         const radius = Math.min(width, height) * 0.045;
-        return <circle key={player.id} cx={point.x} cy={point.y} r={radius} fill={player.side === "offense" ? "#f6b451" : "#203d4a"} stroke="white" strokeWidth="3" />;
+        return <circle key={`thumbnail-player-${player.id}-${index}`} cx={point.x} cy={point.y} r={radius} fill={player.side === "offense" ? "#f6b451" : "#203d4a"} stroke="white" strokeWidth="3" />;
       })}
     </svg>
   );
@@ -221,8 +221,8 @@ export default function PlayField({
         </marker>
       </defs>
       <FieldMarkings orientation={orientation} />
-      {[...routes, ...(drawingRoute ? [drawingRoute] : [])].map(route => (
-        <RouteLine key={route.id} route={route} orientation={orientation} markerId={markerId} faded={route.id === drawingRoute?.id} />
+      {[...routes, ...(drawingRoute ? [drawingRoute] : [])].map((route, index) => (
+        <RouteLine key={`field-route-${route.id}-${index}`} route={route} orientation={orientation} markerId={markerId} faded={route.id === drawingRoute?.id} />
       ))}
       <g
         onPointerDown={onBallPointerDown}
@@ -239,12 +239,12 @@ export default function PlayField({
           </>;
         })()}
       </g>
-      {players.map(player => {
+      {players.map((player, index) => {
         const point = toSvgPoint(player, orientation);
         const selected = player.id === activePlayerId;
         return (
           <g
-            key={player.id}
+            key={`field-player-${player.id}-${index}`}
             onPointerDown={event => onPlayerPointerDown(event, player)}
             className="play-field-token"
             aria-label={`${player.side} ${player.label}`}

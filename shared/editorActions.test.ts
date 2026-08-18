@@ -11,6 +11,12 @@ describe("editor route lifecycle", () => {
     expect(finalizeRoute([qRoute], wrRoute)).toEqual([qRoute, wrRoute]);
   });
 
+  it("does not insert a second list item when pointer-end finalizes the same route twice", () => {
+    const firstFinalization = finalizeRoute([qRoute], wrRoute);
+    const repeatedFinalization = finalizeRoute(firstFinalization, wrRoute);
+    expect(repeatedFinalization).toEqual([qRoute, wrRoute]);
+  });
+
   it("undoes only the latest finalized route", () => {
     expect(undoLastRoute([qRoute, wrRoute])).toEqual([qRoute]);
   });

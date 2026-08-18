@@ -19,3 +19,7 @@
 - [x] Add deterministic coverage for route finalization, undo, clearing, and token/ball drag transitions.
 - [x] Document the editor interaction contract covered by the deterministic test harness.
 - [x] Update default offensive player labels: QB for Q, WR for L1/R1, and RB for R.
+- [x] Fix duplicate React keys caused by repeated route finalization inserting the same route ID twice.
+- [x] Reproduce the route-drawing pointer-end sequence and confirm no duplicate-key warning is emitted.
+- [x] Add an automated assertion that repeated route finalization cannot insert a second route with the same ID.
+- [x] Document the verified duplicate-route insertion root cause in the bug checklist.

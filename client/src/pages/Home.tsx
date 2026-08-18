@@ -102,6 +102,7 @@ export default function Home() {
   const [notes, setNotes] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const fieldFrameRef = useRef<HTMLDivElement>(null);
+  const drawingRouteRef = useRef<RoutePath | null>(null);
 
   const playsQuery = trpc.playbook.list.useQuery(undefined, { enabled: isAuthenticated });
   const createPlay = trpc.playbook.create.useMutation();
@@ -173,19 +174,26 @@ export default function Home() {
 
   const startRoute = (playerId: string, point: FieldPoint) => {
     setActivePlayerId(playerId);
-    setDrawingRoute({ id: nanoid(), playerId, points: [point], color: routeColor, style: routeStyle, kind: routeKind });
+    const draft = { id: nanoid(), playerId, points: [point], color: routeColor, style: routeStyle, kind: routeKind };
+    drawingRouteRef.current = draft;
+    setDrawingRoute(draft);
   };
 
   const extendRoute = (point: FieldPoint) => {
-    setDrawingRoute(current => current ? appendRoutePoint(current, point) : current);
+    const current = drawingRouteRef.current;
+    if (!current) return;
+    const extended = appendRoutePoint(current, point);
+    if (extended === current) return;
+    drawingRouteRef.current = extended;
+    setDrawingRoute(extended);
   };
 
   const endInteraction = () => {
     setDragState(idleDragState());
-    setDrawingRoute(current => {
-      setRoutes(routes => finalizeRoute(routes, current));
-      return null;
-    });
+    const draft = drawingRouteRef.current;
+    drawingRouteRef.current = null;
+    setDrawingRoute(null);
+    setRoutes(routes => finalizeRoute(routes, draft));
   };
 
   const undoRoute = () => setRoutes(undoLastRoute);
