@@ -1,7 +1,8 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertPlay, InsertUser, plays, users } from "../drizzle/schema";
+import { InsertPlay, InsertUser, plays, studyLinks, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { nanoid } from "nanoid";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -121,4 +122,43 @@ export async function deletePlayForCoach(id: number, userId: number) {
   if (!db) throw new Error("Database unavailable");
   const result = await db.delete(plays).where(and(eq(plays.id, id), eq(plays.userId, userId)));
   return result[0].affectedRows > 0;
+}
+
+export async function getOrCreateStudyLinkForCoach(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const existing = await db.select().from(studyLinks).where(eq(studyLinks.userId, userId)).limit(1);
+  if (existing[0]) return existing[0];
+
+  const token = nanoid(32);
+  await db.insert(studyLinks).values({ userId, token });
+  const created = await db.select().from(studyLinks).where(eq(studyLinks.userId, userId)).limit(1);
+  if (!created[0]) throw new Error("Could not create study link");
+  return created[0];
+}
+
+export async function regenerateStudyLinkForCoach(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const token = nanoid(32);
+  const existing = await db.select().from(studyLinks).where(eq(studyLinks.userId, userId)).limit(1);
+  if (existing[0]) {
+    await db.update(studyLinks).set({ token }).where(eq(studyLinks.userId, userId));
+  } else {
+    await db.insert(studyLinks).values({ userId, token });
+  }
+  return { token };
+}
+
+export async function getSharedStudyPlaybook(token: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const link = await db.select().from(studyLinks).where(eq(studyLinks.token, token)).limit(1);
+  if (!link[0]) return undefined;
+  const coach = await db.select({ name: users.name }).from(users).where(eq(users.id, link[0].userId)).limit(1);
+  const sharedPlays = await listPlaysForCoach(link[0].userId);
+  return {
+    coachName: coach[0]?.name ?? "Your coach",
+    plays: sharedPlays,
+  };
 }

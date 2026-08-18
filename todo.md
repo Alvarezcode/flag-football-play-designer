@@ -27,3 +27,11 @@
 - [x] Add a standard offensive and defensive formation template picker.
 - [x] Validate route adjustment and template loading with deterministic tests and responsive visual review.
 - [x] Fix offensive formation templates so selecting a different look visibly repositions player tokens.
+- [x] Create a coach-owned, revocable public study link for sharing a read-only playbook with players.
+- [x] Add protected sharing controls that let coaches copy and regenerate their study link.
+- [x] Build a responsive player study page that lists and displays shared plays without editing controls.
+- [x] Test link privacy, revocation, and read-only study behavior.
+- [x] Verify a valid shared playbook renders for players with no editing controls or editable field interactions.
+- [x] Add an automated end-to-end contract test for public study-link rendering and read-only behavior.
+- [x] Add an integration-level valid-link verification covering creation, public retrieval, and read-only study rendering.
+- [x] Add a browser-level valid study-link flow verification for public rendering and blocked editing interactions.

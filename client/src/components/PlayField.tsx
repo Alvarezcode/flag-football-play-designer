@@ -27,6 +27,7 @@ type PlayFieldProps = {
   onRoutePointStart: (routeId: string, pointIndex: number) => void;
   onRoutePointMove: (routeId: string, pointIndex: number, point: FieldPoint) => void;
   onInteractionEnd: () => void;
+  readOnly?: boolean;
 };
 
 export const fieldSize = (orientation: FieldOrientation) => orientation === "horizontal"
@@ -199,12 +200,14 @@ export default function PlayField({
   onRoutePointStart,
   onRoutePointMove,
   onInteractionEnd,
+  readOnly = false,
 }: PlayFieldProps) {
   const { width, height } = fieldSize(orientation);
   const markerId = "route-arrow";
   const radius = Math.min(width, height) * 0.043;
 
   const onSvgPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (readOnly) return;
     if (!drawingRoute && !draggingPlayerId && !draggingBall && !draggingRoutePoint) return;
     const point = getPoint(event.clientX, event.clientY, event.currentTarget, orientation);
     if (drawingRoute) onRouteExtend(point);
@@ -214,6 +217,7 @@ export default function PlayField({
   };
 
   const onPlayerPointerDown = (event: ReactPointerEvent<SVGGElement>, player: PlayerToken) => {
+    if (readOnly) return;
     event.stopPropagation();
     const svg = event.currentTarget.ownerSVGElement;
     if (!svg) return;
@@ -226,6 +230,7 @@ export default function PlayField({
   };
 
   const onBallPointerDown = (event: ReactPointerEvent<SVGGElement>) => {
+    if (readOnly) return;
     event.stopPropagation();
     const svg = event.currentTarget.ownerSVGElement;
     if (!svg) return;
@@ -241,9 +246,9 @@ export default function PlayField({
       aria-label="Interactive flag football play field"
       style={{ touchAction: "none" }}
       onPointerMove={onSvgPointerMove}
-      onPointerUp={onInteractionEnd}
-      onPointerCancel={onInteractionEnd}
-      onPointerLeave={event => { if (event.buttons === 0) onInteractionEnd(); }}
+      onPointerUp={readOnly ? undefined : onInteractionEnd}
+      onPointerCancel={readOnly ? undefined : onInteractionEnd}
+      onPointerLeave={readOnly ? undefined : event => { if (event.buttons === 0) onInteractionEnd(); }}
     >
       <defs>
         <marker id={markerId} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">

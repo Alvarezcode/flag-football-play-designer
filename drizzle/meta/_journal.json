@@ -15,6 +15,13 @@
       "when": 1787077599703,
       "tag": "0001_blushing_living_lightning",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787082836040,
+      "tag": "0002_curious_gressill",
+      "breakpoints": true
     }
   ]
 }

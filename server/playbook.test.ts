@@ -9,6 +9,9 @@ const db = vi.hoisted(() => ({
   createPlayForCoach: vi.fn(),
   updatePlayForCoach: vi.fn(),
   deletePlayForCoach: vi.fn(),
+  getOrCreateStudyLinkForCoach: vi.fn(),
+  regenerateStudyLinkForCoach: vi.fn(),
+  getSharedStudyPlaybook: vi.fn(),
 }));
 
 vi.mock("./db", () => db);

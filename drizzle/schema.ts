@@ -40,3 +40,13 @@ export const plays = mysqlTable("plays", {
 
 export type Play = typeof plays.$inferSelect;
 export type InsertPlay = typeof plays.$inferInsert;
+
+export const studyLinks = mysqlTable("studyLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StudyLink = typeof studyLinks.$inferSelect;

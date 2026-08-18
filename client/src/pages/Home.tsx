@@ -9,7 +9,7 @@ import { appendRoutePoint, transformFieldPoint } from "@shared/playDesigner";
 import { ballDragState, clearAllRoutes, clearPlayerRoutes, finalizeRoute, idleDragState, playerDragState, undoLastRoute, updateRoutePoint } from "@shared/editorActions";
 import { applyFormationTemplate, formationTemplates, type FormationSide, type FormationTemplate } from "@shared/formations";
 import { nanoid } from "nanoid";
-import { ArrowDownToLine, ChevronRight, CircleDot, Eraser, FilePlus2, Flag, LayoutGrid, LayoutTemplate, Loader2, LogIn, MousePointer2, PenTool, RotateCcw, Save, Shield, Sparkles, Trash2, Undo2, UsersRound } from "lucide-react";
+import { ArrowDownToLine, ChevronRight, CircleDot, Copy, Eraser, FilePlus2, Flag, LayoutGrid, LayoutTemplate, Link2, Loader2, LogIn, MousePointer2, PenTool, RefreshCw, RotateCcw, Save, Shield, Share2, Sparkles, Trash2, Undo2, UsersRound, X } from "lucide-react";
 
 type View = "design" | "playbook";
 type Tool = "select" | "route" | "ball";
@@ -107,6 +107,8 @@ export default function Home() {
   const [notes, setNotes] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [templateSide, setTemplateSide] = useState<FormationSide>("offense");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [studyLink, setStudyLink] = useState<{ token: string } | null>(null);
   const fieldFrameRef = useRef<HTMLDivElement>(null);
   const drawingRouteRef = useRef<RoutePath | null>(null);
 
@@ -114,6 +116,8 @@ export default function Home() {
   const createPlay = trpc.playbook.create.useMutation();
   const updatePlay = trpc.playbook.update.useMutation();
   const deletePlay = trpc.playbook.delete.useMutation();
+  const getStudyLink = trpc.study.getLink.useMutation();
+  const regenerateStudyLink = trpc.study.regenerateLink.useMutation();
 
   const activePreset = useMemo(() => routePresets.find(preset => preset.id === routeKind), [routeKind]);
   const diagram: PlayDiagram = useMemo(() => ({ orientation, format, players, routes, ball }), [orientation, format, players, routes, ball]);
@@ -317,6 +321,29 @@ export default function Home() {
     if (svg) diagramToDataUri(svg, playName.trim().replace(/\s+/g, "-").toLowerCase());
   };
 
+  const studyUrl = studyLink ? `${window.location.origin}/study/${studyLink.token}` : "";
+
+  const openSharing = () => {
+    if (!isAuthenticated) return startLogin();
+    setShareOpen(true);
+    if (!studyLink) getStudyLink.mutate(undefined, { onSuccess: link => setStudyLink(link), onError: () => toast.error("Could not create a study link. Please try again.") });
+  };
+
+  const copyStudyLink = async () => {
+    if (!studyUrl) return;
+    try {
+      await navigator.clipboard.writeText(studyUrl);
+      toast.success("Study link copied. Share it with your players.");
+    } catch {
+      toast.error("Copy failed. Select the link and copy it manually.");
+    }
+  };
+
+  const replaceStudyLink = () => {
+    if (!window.confirm("Replace this study link? Anyone with the old link will lose access.")) return;
+    regenerateStudyLink.mutate(undefined, { onSuccess: link => { setStudyLink(link); toast.success("New study link created. The old link no longer works."); }, onError: () => toast.error("Could not replace the study link. Please try again.") });
+  };
+
   const labelForFormat = format === "5v5" ? "5 v 5" : "7 v 7";
 
   return (
@@ -335,10 +362,12 @@ export default function Home() {
             <button onClick={() => setView("playbook")} className={`nav-tab ${view === "playbook" ? "nav-tab-active" : ""}`}><LayoutGrid className="size-3.5" /> <span className="hidden sm:inline">Playbook</span></button>
           </nav>
           <div className="flex items-center gap-2">
-            {isAuthenticated ? <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-[#c5d5d0] lg:block">Coach {user?.name?.split(" ")[0] ?? ""}</span> : <button onClick={startLogin} className="header-login"><LogIn className="size-3.5" /> Sign in</button>}
+            {isAuthenticated ? <><button onClick={openSharing} className="share-trigger"><Share2 className="size-3.5" /> <span className="hidden sm:inline">Share</span></button><span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-[#c5d5d0] lg:block">Coach {user?.name?.split(" ")[0] ?? ""}</span></> : <button onClick={startLogin} className="header-login"><LogIn className="size-3.5" /> Sign in</button>}
           </div>
         </div>
       </header>
+
+      {shareOpen && <div className="share-modal-backdrop" onMouseDown={event => { if (event.currentTarget === event.target) setShareOpen(false); }}><section className="share-modal" role="dialog" aria-modal="true" aria-label="Share team study link"><button onClick={() => setShareOpen(false)} className="share-close" aria-label="Close sharing dialog"><X className="size-4" /></button><span className="share-modal-icon"><Share2 className="size-5" /></span><p className="eyebrow mt-4">Team study link</p><h2>Help your players prepare.</h2><p className="mt-2 text-sm leading-6 text-[#9bb0aa]">Players can open this link on any device to study every saved play. They can view, but never edit, your playbook.</p>{getStudyLink.isPending ? <div className="share-loading"><Loader2 className="size-5 animate-spin text-[#f3b348]" /> Creating your private link…</div> : studyLink ? <div className="mt-5"><label className="field-label">Player study link<div className="share-link-row"><input value={studyUrl} readOnly className="designer-input" aria-label="Player study link" /><button onClick={copyStudyLink} className="copy-link-button" aria-label="Copy study link"><Copy className="size-4" /></button></div></label><button onClick={copyStudyLink} className="save-button mt-3"><Link2 className="size-4" /> Copy link</button><button onClick={replaceStudyLink} disabled={regenerateStudyLink.isPending} className="regenerate-link-button mt-3">{regenerateStudyLink.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Replace link & revoke old access</button><p className="mt-4 text-xs leading-5 text-[#7f9891]">Replacing this link immediately stops the old link from working. Use it if a player leaves the team.</p></div> : <div className="share-loading text-[#ffabb6]">We could not load your link. Try closing and reopening this panel.</div>}</section></div>}
 
       {view === "design" ? (
         <main className="mx-auto max-w-[1540px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
