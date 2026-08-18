@@ -26,3 +26,4 @@
 - [x] Add route-point editing handles for selecting and fine-tuning finalized route paths.
 - [x] Add a standard offensive and defensive formation template picker.
 - [x] Validate route adjustment and template loading with deterministic tests and responsive visual review.
+- [x] Fix offensive formation templates so selecting a different look visibly repositions player tokens.

@@ -15,7 +15,7 @@ describe("formation templates", () => {
     if (!spread) throw new Error("Spread template missing");
     const result = applyFormationTemplate(players, spread);
 
-    expect(result.find(player => player.id === "l1")).toMatchObject({ x: 45, y: 20 });
+    expect(result.find(player => player.id === "l1")).toMatchObject({ x: 45, y: 16 });
     expect(result.find(player => player.id === "quarterback")).toMatchObject({ x: 39, y: 50 });
     expect(result.find(player => player.id === "d1")).toMatchObject({ x: 90, y: 20 });
   });
@@ -27,5 +27,23 @@ describe("formation templates", () => {
 
     expect(result.find(player => player.id === "d1")).toMatchObject({ x: 72, y: 26 });
     expect(result.find(player => player.id === "l1")).toMatchObject({ x: 10, y: 10 });
+  });
+
+  it("gives each offensive template a visibly different receiver alignment", () => {
+    const spread = formationTemplates.find(template => template.id === "spread");
+    const trips = formationTemplates.find(template => template.id === "trips-right");
+    const bunch = formationTemplates.find(template => template.id === "bunch-left");
+    if (!spread || !trips || !bunch) throw new Error("Offensive formation template missing");
+
+    const spreadLeftReceiver = applyFormationTemplate(players, spread).find(player => player.id === "l1");
+    const tripsLeftReceiver = applyFormationTemplate(players, trips).find(player => player.id === "l1");
+    const bunchRightReceiver = applyFormationTemplate([
+      ...players,
+      { id: "r1", label: "WR", side: "offense" as const, x: 10, y: 90 },
+    ], bunch).find(player => player.id === "r1");
+
+    expect(tripsLeftReceiver).toMatchObject({ x: 43, y: 58 });
+    expect(tripsLeftReceiver?.y).not.toBe(spreadLeftReceiver?.y);
+    expect(bunchRightReceiver).toMatchObject({ x: 43, y: 43 });
   });
 });
