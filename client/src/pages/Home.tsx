@@ -25,11 +25,11 @@ const routeColors = ["#42D5FF", "#F7CF45", "#FF964A", "#FF6F91", "#A6EF68", "#FF
 
 function basePlayers(format: "5v5" | "7v7"): PlayerToken[] {
   const standard: PlayerToken[] = [
-    { id: "l1", label: "L1", side: "offense", x: 45, y: 22 },
-    { id: "r1", label: "R1", side: "offense", x: 45, y: 78 },
+    { id: "l1", label: "WR", side: "offense", x: 45, y: 22 },
+    { id: "r1", label: "WR", side: "offense", x: 45, y: 78 },
     { id: "center", label: "C", side: "offense", x: 48, y: 50 },
-    { id: "quarterback", label: "Q", side: "offense", x: 39, y: 50 },
-    { id: "back", label: "R", side: "offense", x: 32, y: 62 },
+    { id: "quarterback", label: "QB", side: "offense", x: 39, y: 50 },
+    { id: "back", label: "RB", side: "offense", x: 32, y: 62 },
     { id: "d1", label: "D1", side: "defense", x: 61, y: 25 },
     { id: "d2", label: "D2", side: "defense", x: 61, y: 49 },
     { id: "d3", label: "D3", side: "defense", x: 61, y: 75 },
@@ -38,8 +38,8 @@ function basePlayers(format: "5v5" | "7v7"): PlayerToken[] {
   ];
   if (format === "5v5") return standard;
   return [
-    { id: "l2", label: "L2", side: "offense", x: 42, y: 37 },
-    { id: "r2", label: "R2", side: "offense", x: 42, y: 64 },
+    { id: "l2", label: "WR", side: "offense", x: 42, y: 37 },
+    { id: "r2", label: "WR", side: "offense", x: 42, y: 64 },
     ...standard,
     { id: "d6", label: "D6", side: "defense", x: 70, y: 30 },
     { id: "d7", label: "D7", side: "defense", x: 70, y: 70 },

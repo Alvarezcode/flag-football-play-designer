@@ -18,3 +18,4 @@
 - [x] Validate and document the primary editor interactions in a deterministic test harness.
 - [x] Add deterministic coverage for route finalization, undo, clearing, and token/ball drag transitions.
 - [x] Document the editor interaction contract covered by the deterministic test harness.
+- [x] Update default offensive player labels: QB for Q, WR for L1/R1, and RB for R.
