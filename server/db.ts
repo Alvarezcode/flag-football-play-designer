@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertPlay, InsertUser, plays, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,36 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function listPlaysForCoach(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  return db.select().from(plays).where(eq(plays.userId, userId)).orderBy(desc(plays.updatedAt));
+}
+
+export async function getPlayForCoach(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.select().from(plays).where(and(eq(plays.id, id), eq(plays.userId, userId))).limit(1);
+  return result[0];
+}
+
+export async function createPlayForCoach(userId: number, values: Omit<InsertPlay, "id" | "userId" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.insert(plays).values({ ...values, userId });
+  return getPlayForCoach(Number(result[0].insertId), userId);
+}
+
+export async function updatePlayForCoach(id: number, userId: number, values: Omit<InsertPlay, "id" | "userId" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(plays).set(values).where(and(eq(plays.id, id), eq(plays.userId, userId)));
+  return getPlayForCoach(id, userId);
+}
+
+export async function deletePlayForCoach(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.delete(plays).where(and(eq(plays.id, id), eq(plays.userId, userId)));
+  return result[0].affectedRows > 0;
+}

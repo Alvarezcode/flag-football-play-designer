@@ -1,4 +1,5 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import type { PlayDiagram } from "../shared/playbook";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +26,17 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const plays = mysqlTable("plays", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  formation: varchar("formation", { length: 120 }).notNull().default(""),
+  playType: mysqlEnum("playType", ["run", "pass"]).notNull(),
+  notes: text("notes").notNull(),
+  diagram: json("diagram").$type<PlayDiagram>().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Play = typeof plays.$inferSelect;
+export type InsertPlay = typeof plays.$inferInsert;
