@@ -35,3 +35,6 @@
 - [x] Add an automated end-to-end contract test for public study-link rendering and read-only behavior.
 - [x] Add an integration-level valid-link verification covering creation, public retrieval, and read-only study rendering.
 - [x] Add a browser-level valid study-link flow verification for public rendering and blocked editing interactions.
+- [x] Add read-only animated route playback to the player study page.
+- [x] Add player controls for play, pause, replay, and playback speed.
+- [x] Test deterministic playback progression and responsive shared-study controls.

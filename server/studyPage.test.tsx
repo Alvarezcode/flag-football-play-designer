@@ -62,6 +62,8 @@ describe("public player study page", () => {
     expect(markup).toContain("Flood Right");
     expect(markup).toContain("Read-only access");
     expect(markup).toContain("Coach’s note");
+    expect(markup).toContain("Watch play");
+    expect(markup).toContain("Replay from the beginning");
     expect(markup).not.toContain("Save to playbook");
     expect(markup).not.toContain("Clear all");
     expect(fieldProps.calls[0]).toMatchObject({
@@ -69,6 +71,7 @@ describe("public player study page", () => {
       activeTool: "select",
       activePlayerId: null,
       selectedRouteId: null,
+      playbackProgress: 0,
     });
   });
 });

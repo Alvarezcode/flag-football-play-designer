@@ -1,6 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { FieldOrientation, FieldPoint, PlayerToken, RoutePath } from "@shared/playbook";
 import { clampFieldPoint } from "@shared/playDesigner";
+import { playersAtPlaybackProgress, routeTraceAtProgress } from "@shared/playback";
 
 type ActiveTool = "select" | "route" | "ball";
 type RoutePointHandle = { routeId: string; pointIndex: number };
@@ -28,6 +29,7 @@ type PlayFieldProps = {
   onRoutePointMove: (routeId: string, pointIndex: number, point: FieldPoint) => void;
   onInteractionEnd: () => void;
   readOnly?: boolean;
+  playbackProgress?: number | null;
 };
 
 export const fieldSize = (orientation: FieldOrientation) => orientation === "horizontal"
@@ -118,8 +120,12 @@ function FieldMarkings({ orientation }: { orientation: FieldOrientation }) {
   );
 }
 
-function RouteLine({ route, orientation, markerId, faded = false, selected = false, onSelect }: { route: RoutePath; orientation: FieldOrientation; markerId: string; faded?: boolean; selected?: boolean; onSelect?: (id: string) => void }) {
+function RouteLine({ route, orientation, markerId, faded = false, selected = false, onSelect, playbackProgress = null }: { route: RoutePath; orientation: FieldOrientation; markerId: string; faded?: boolean; selected?: boolean; onSelect?: (id: string) => void; playbackProgress?: number | null }) {
   const points = route.points.map(point => {
+    const coord = toSvgPoint(point, orientation);
+    return `${coord.x},${coord.y}`;
+  }).join(" ");
+  const tracePoints = playbackProgress === null ? "" : routeTraceAtProgress(route, playbackProgress).map(point => {
     const coord = toSvgPoint(point, orientation);
     return `${coord.x},${coord.y}`;
   }).join(" ");
@@ -133,10 +139,11 @@ function RouteLine({ route, orientation, markerId, faded = false, selected = fal
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeDasharray={dashFor(route.style)}
-      markerEnd={`url(#${markerId})`}
-      opacity={faded ? 0.65 : 1}
+      markerEnd={playbackProgress === null ? `url(#${markerId})` : undefined}
+      opacity={playbackProgress === null ? (faded ? 0.65 : 1) : 0.19}
       style={{ filter: selected ? "drop-shadow(0 0 5px rgba(255,255,255,.85))" : "drop-shadow(0 2px 2px rgba(0,0,0,.28))" }}
     />
+    {playbackProgress !== null && tracePoints.split(" ").length > 1 && <polyline points={tracePoints} fill="none" stroke={route.color} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={dashFor(route.style)} markerEnd={`url(#${markerId})`} className="route-playback-trace" />}
   </g>;
 }
 
@@ -201,10 +208,12 @@ export default function PlayField({
   onRoutePointMove,
   onInteractionEnd,
   readOnly = false,
+  playbackProgress = null,
 }: PlayFieldProps) {
   const { width, height } = fieldSize(orientation);
   const markerId = "route-arrow";
   const radius = Math.min(width, height) * 0.043;
+  const displayedPlayers = playbackProgress === null ? players : playersAtPlaybackProgress(players, routes, playbackProgress);
 
   const onSvgPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (readOnly) return;
@@ -257,9 +266,9 @@ export default function PlayField({
       </defs>
       <FieldMarkings orientation={orientation} />
       {[...routes, ...(drawingRoute ? [drawingRoute] : [])].map((route, index) => (
-        <RouteLine key={`field-route-${route.id}-${index}`} route={route} orientation={orientation} markerId={markerId} faded={route.id === drawingRoute?.id} selected={route.id === selectedRouteId} onSelect={onRouteSelect} />
+        <RouteLine key={`field-route-${route.id}-${index}`} route={route} orientation={orientation} markerId={markerId} faded={route.id === drawingRoute?.id} selected={route.id === selectedRouteId} onSelect={readOnly ? undefined : onRouteSelect} playbackProgress={playbackProgress} />
       ))}
-      {routes.filter(route => route.id === selectedRouteId).map(route => <RouteHandles key={`handles-${route.id}`} route={route} orientation={orientation} onPointStart={pointIndex => onRoutePointStart(route.id, pointIndex)} />)}
+      {!readOnly && routes.filter(route => route.id === selectedRouteId).map(route => <RouteHandles key={`handles-${route.id}`} route={route} orientation={orientation} onPointStart={pointIndex => onRoutePointStart(route.id, pointIndex)} />)}
       <g
         onPointerDown={onBallPointerDown}
         className="play-field-ball"
@@ -275,7 +284,7 @@ export default function PlayField({
           </>;
         })()}
       </g>
-      {players.map((player, index) => {
+      {displayedPlayers.map((player, index) => {
         const point = toSvgPoint(player, orientation);
         const selected = player.id === activePlayerId;
         return (
